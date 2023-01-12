@@ -1,69 +1,39 @@
-import express from 'express';
-import UserManager from './UserManager.js'
+import express from 'express';  
+import handlebars from 'express-handlebars';
+import viewsRouter from './routes/views.routes.js';
+import { Server } from 'socket.io';
+import __dirname from './dirname.js';
 
-const app = express()
+const app = express();
+const httpServer = app.listen(3000, () => console.log(`Server corriendo en puerto ${3000}`))
+
+const io = new Server(httpServer)
 
 
-const productos = [
-    {
-      id: 1,
-      nombre: "Mousse de chocolate",
-      precio: 2000,
-    },
-    {
-      id: 2,
-      nombre: "Marquise",
-      precio: 1700,
-    },
-    {
-      id: 3,
-      nombre: "Chocotorta",
-      precio: 1500,
-    },
-  ];
+app.engine('hbs', handlebars.engine({
+    extname: 'hbs',
+    defaultlayout: 'main'
+}))
+
+app.set('view engine', 'hbs');
+app.set('views', `${__dirname}/views`);  
+app.use(express.static(`${__dirname}/public`))   
+
+app.use('/', viewsRouter);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
+
+app.get('/', (req, res) =>{
+    res.render('index', {
+        title: 'Tentatortas',
+        name: 'Agu',
+        age: 28
+    })   
+})
+
+io.on("connection", (socket) => {
+    console.log('Se ha conectado un nuevo cliente');
   
-
-app.get('/', (req, res) => {
-    res.send('<h1 style="color:red;"> Bienvenidos a mi pagina web </h1>')
-})
-
-app.get('/usuario/:id', async (req, res) => {
-    const { id } = req.params
-    const users = userManager.getUsers()
-    console.log(users)
-    const user = users.find(user => user.id == id)
-    console.log(user)
-
-    if(!user) {
-        return res.send('User not found')
-    }
-
-    res.json(user)
-
-})
-
-app.get('/productos', (req, res) => {
-    const { nombre, precio } = req.query
-    const producto = productos.find(prod => prod.nombre === nombre || prod.precio == precio)
-
-    if(!producto) {
-        return res.send('Producto not found')
-    }
-
-    res.json(producto)
-})
-
-// app.get('/usuario', (request, response) => {
-//     const usuario = {
-//         name: 'juan',
-//         age: 32,
-//         email: 'juan@gmail.com',
-//     }
-//     response.json(usuario)
-// })
-
-// app.get('*', (request, response) => {
-//     response.send('error')
-// })
-
-app.listen(3000, () => console.log('Listening on port 3000'))
+    socket.emit('mensaje', 'Hola, te contactaste con soporte')
+    socket.on('mensaje1', (data) => console.log(data))
+  })
